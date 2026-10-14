@@ -15,16 +15,18 @@ namespace HttpUtility
 {
     public class HttpRequest : IHttpRequest
     {
-        
+
         private string _baseURL;
         public string BaseUrl { get => _baseURL; set => _baseURL = !value.EndsWith("/") ? value + "/" : value; }
         public string Token { get; set; }
         public bool EnabledProxy { get; set; }
-        
+
         private HttpClient _httpclient;
         BaseHttpHandler BaseHttpHandler { get; set; }
-        public HttpRequest(bool IsProxy = false , InterceptorAsync preSendAsync = null)
+        InterceptorAsync preSendAsync;
+        public HttpRequest(bool IsProxy = false, InterceptorAsync preSendAsync = null)
         {
+            this.preSendAsync = preSendAsync;   
             BaseHttpHandler = new BaseHttpHandler(IsProxy, preSendAsync);
         }
         private void CreateHttpClient()
@@ -79,7 +81,12 @@ namespace HttpUtility
 
         private async Task<HttpResponseMessage> PostAsync(string url, object input)
         {
-            StringContent content = input == null ? null : new StringContent(JsonConvert.SerializeObject(input));
+            StringContent content = null;
+            if (input != null)
+            {
+                string json = JsonConvert.SerializeObject(input);              
+                content = new StringContent(json, Encoding.UTF8, "application/json");
+            }
             var response = await _httpclient.PostAsync(url, content);
             return response;
         }
@@ -89,8 +96,6 @@ namespace HttpUtility
             IsSameBaseURL();
             if (urlParam != null)
                 url = AttachUrlParam(url, urlParam);
-            //StringContent content = input == null ? null : new StringContent(JsonConvert.SerializeObject(input));
-
             HttpResponseMessage response = await PostAsync(url, input);
             //response.EnsureSuccessStatusCode();
             string responseBody = await response.Content.ReadAsStringAsync();
@@ -154,6 +159,32 @@ namespace HttpUtility
                 return new HttpResponse<string>(response.StatusCode, responseBody);
             }
         }
+        public async Task<HttpResponseMessage> PutAsync(string url, object input)
+        {
+            StringContent content = null;
+            if (input != null)
+            {
+                string json = JsonConvert.SerializeObject(input);
+                content = new StringContent(json, Encoding.UTF8, "application/json");
+            }
+            var response = await _httpclient.PutAsync(url, content);
+            return response;
+        }
+        public async Task<HttpResponse<TResult>> PutAsync<TResult>(string url, object input = null, Dictionary<string, string> urlParam = null)
+        {
+            IsSameBaseURL();
+            if (urlParam != null)
+                url = AttachUrlParam(url, urlParam);
+            HttpResponseMessage response = await PutAsync(url, input);
+            //response.EnsureSuccessStatusCode();
+            string responseBody = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+            {
+                return new HttpResponse<TResult>(response.StatusCode, responseBody);
+            }
 
+            TResult result = JsonConvert.DeserializeObject<TResult>(responseBody);
+            return new HttpResponse<TResult>(result);
+        }
     }
 }

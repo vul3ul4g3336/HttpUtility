@@ -24,7 +24,7 @@ namespace HttpUtility
         //public Task<TResult> PutAsync<TResult>(string url, object input, Dictionary<string, string>? urlParam = null);
         //public Task<string> PutAsync(string url, HttpContent content);
         public  Task<HttpResponse<string>> DeleteAsync(string url, Dictionary<string, string> urlParam = null);
-
+        public  Task<HttpResponse<TResult>> PutAsync<TResult>(string url, object input = null, Dictionary<string, string> urlParam = null);
         public String BaseUrl { set; }
         public String Token { set; get; }
         public bool EnabledProxy { get; set; }
